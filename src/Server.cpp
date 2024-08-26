@@ -4,13 +4,17 @@
 
 bool match_pattern(const std::string& input_line, const std::string& pattern)
 {
-  if (pattern.length() == 1)
+  if (pattern.length() == 1) // literal character
   {
     return input_line.find(pattern) != std::string::npos;
   }
-  else if (pattern.compare("\\d") == 0)
+  else if (pattern.compare("\\d") == 0) // any digit
   {
     return std::any_of(input_line.begin(), input_line.end(), ::isdigit);
+  }
+  else if (pattern.compare("\\w") == 0) // any alpha numeric
+  {
+    return std::any_of(input_line.begin(), input_line.end(), ::isalnum);
   }
   else
   {
