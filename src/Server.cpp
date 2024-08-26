@@ -16,6 +16,18 @@ bool match_pattern(const std::string& input_line, const std::string& pattern)
   {
     return std::any_of(input_line.begin(), input_line.end(), ::isalnum);
   }
+  else if (int startPos = pattern.find("[") != std::string::npos) // positive character group
+  {
+    struct Contains
+    {
+        const std::string d;
+        Contains(const std::string &n) : d(n) {}
+        bool operator()(char n) const { return d.find(n) != std::string::npos; }
+    };
+
+    int endPos = pattern.find("]");
+    return std::any_of(input_line.begin(), input_line.end(), Contains(pattern.substr(startPos, endPos - startPos)));
+  }
   else
   {
     throw std::runtime_error("Unhandled pattern " + pattern);
@@ -53,10 +65,12 @@ int main(int argc, char* argv[])
   {
     if (match_pattern(input_line, pattern))
     {
+      std::cout << "found\n";
       return 0;
     }
     else
     {
+      std::cout << "not found\n";
       return 1;
     }
   }
