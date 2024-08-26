@@ -19,7 +19,11 @@
 std::unique_ptr<Pattern> PatternFactory::generatePattern(std::string& patterns)
 {
   // order is important here
-  if (DigitsPattern::is_this_pattern(patterns))
+  if (StartAnchorPattern::is_this_pattern(patterns))
+  {
+    return std::unique_ptr<Pattern>(new StartAnchorPattern(patterns));
+  }
+  else if (DigitsPattern::is_this_pattern(patterns))
   {
     return std::unique_ptr<Pattern>(new DigitsPattern(patterns));
   }
@@ -92,6 +96,11 @@ bool NegativeCharGroupPattern::is_this_pattern(const std::string& patterns)
   return true;
 }
 
+bool StartAnchorPattern::is_this_pattern(const std::string& patterns)
+{
+  return patterns.compare(0, 1, "^") == 0;
+}
+
 
 /**********************************************************************
 * Pattern Constructors
@@ -153,6 +162,14 @@ NegativeCharGroupPattern::NegativeCharGroupPattern(std::string& patterns)
   patterns = patterns.substr(endPos+1);
 
   //std::cout << m_characters << " " << patterns << std::endl;
+}
+
+StartAnchorPattern::StartAnchorPattern(std::string& patterns)
+{
+  if (!is_this_pattern)
+    throw std::runtime_error("Attempted to create StartAnchorPattern without proper pattern in " + patterns);
+
+  patterns = patterns.substr(1);
 }
 
 /**********************************************************************
@@ -232,6 +249,14 @@ std::size_t NegativeCharGroupPattern::find_first_of(std::size_t pos, const std::
   return std::string::npos;
 }
 
+std::size_t StartAnchorPattern::find_first_of(std::size_t pos, const std::string& input)
+{
+  if (pos != 0)
+    return std::string::npos;
+
+  return 0;
+}
+
 /**********************************************************************
 * Pattern starts_with
 *
@@ -304,4 +329,9 @@ std::size_t NegativeCharGroupPattern::starts_with(std::size_t pos, const std::st
     return pos + 1;
 
   return std::string::npos;
+}
+
+std::size_t StartAnchorPattern::starts_with(std::size_t pos, const std::string& input)
+{
+  throw std::runtime_error("Start of string anchor mus be the first character");
 }

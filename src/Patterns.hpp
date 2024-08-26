@@ -93,3 +93,19 @@ class NegativeCharGroupPattern : public Pattern
   private:
     std::string m_characters = "";
 };
+
+class StartAnchorPattern : public Pattern
+{
+  public:
+    StartAnchorPattern(std::string& patterns);
+
+    std::size_t find_first_of(std::size_t pos, const std::string& input);
+    std::size_t starts_with(std::size_t pos, const std::string& input);
+
+    std::string print() {return std::string("Start Anchor Pattern ") + m_characters;};
+
+    static bool is_this_pattern(const std::string& patterns);
+
+  private:
+    std::string m_characters = "";
+};
