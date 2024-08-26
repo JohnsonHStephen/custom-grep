@@ -4,6 +4,13 @@
 
 bool match_pattern(const std::string& input_line, const std::string& pattern)
 {
+  struct ContainsCharacters
+  {
+    const std::string d;
+    ContainsCharacters(const std::string &n) : d(n) {}
+    bool operator()(char n) const { return d.find(n) != std::string::npos; }
+  };
+
   if (pattern.length() == 1) // literal character
   {
     return input_line.find(pattern) != std::string::npos;
@@ -16,17 +23,16 @@ bool match_pattern(const std::string& input_line, const std::string& pattern)
   {
     return std::any_of(input_line.begin(), input_line.end(), ::isalnum);
   }
+  else if (int startPos = pattern.find("[^") != std::string::npos) // negative character group
+  {
+    startPos++;
+    int endPos = pattern.find("]");
+    return std::none_of(input_line.begin(), input_line.end(), ContainsCharacters(pattern.substr(startPos, endPos - startPos)));
+  }
   else if (int startPos = pattern.find("[") != std::string::npos) // positive character group
   {
-    struct Contains
-    {
-        const std::string d;
-        Contains(const std::string &n) : d(n) {}
-        bool operator()(char n) const { return d.find(n) != std::string::npos; }
-    };
-
     int endPos = pattern.find("]");
-    return std::any_of(input_line.begin(), input_line.end(), Contains(pattern.substr(startPos, endPos - startPos)));
+    return std::any_of(input_line.begin(), input_line.end(), ContainsCharacters(pattern.substr(startPos, endPos - startPos)));
   }
   else
   {
