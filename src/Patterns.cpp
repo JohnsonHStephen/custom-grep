@@ -175,7 +175,7 @@ std::size_t LiteralCharacterPattern::find_first_of(std::size_t pos, const std::s
     throw std::runtime_error("Attempted to check for LiteralCharacterPattern beyond the string bounds");
 
   //std::cout << "checking at pos " << pos  << " and beyond from " << input << " looking for " << m_character << " found at " << input.find(m_character, pos) << std::endl;
-  if ((newPos = input.find(m_character, pos)) != std::string::npos)
+  if ((newPos = input.find_first_of(m_character, pos)) != std::string::npos)
   {
     //std::cout << "found at pos " << newPos  << " character " << input[newPos] << " from " << input << " looking for " << m_character << std::endl;
     return newPos + 1;
@@ -214,7 +214,10 @@ std::size_t PositiveCharGroupPattern::find_first_of(std::size_t pos, const std::
   if (pos >= input.size())
     throw std::runtime_error("Attempted to check for PositiveCharGroupPattern beyond the string bounds");
 
-  return input.find_first_of(m_characters, pos)+1;
+  if ((newPos = input.find_first_of(m_characters, pos)) != std::string::npos)
+    return newPos + 1;
+
+  return std::string::npos;
 }
 
 std::size_t NegativeCharGroupPattern::find_first_of(std::size_t pos, const std::string& input)
@@ -223,7 +226,10 @@ std::size_t NegativeCharGroupPattern::find_first_of(std::size_t pos, const std::
   if (pos >= input.size())
     throw std::runtime_error("Attempted to check for NegativeCharGroupPattern beyond the string bounds");
 
-  return input.find_first_not_of(m_characters, pos)+1;
+  if ((newPos = input.find_first_not_of(m_characters, pos)) != std::string::npos)
+    return newPos + 1;
+
+  return std::string::npos;
 }
 
 /**********************************************************************
