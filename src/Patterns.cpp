@@ -18,38 +18,47 @@
 **********************************************************************/
 std::unique_ptr<Pattern> PatternFactory::generatePattern(std::string& patterns)
 {
+  std::unique_ptr<Pattern> result = nullptr;
   // order is important here
   if (StartAnchorPattern::is_this_pattern(patterns))
   {
-    return std::unique_ptr<Pattern>(new StartAnchorPattern(patterns));
+    result = std::unique_ptr<Pattern>(new StartAnchorPattern(patterns));
   }
   else if (EndAnchorPattern::is_this_pattern(patterns))
   {
-    return std::unique_ptr<Pattern>(new EndAnchorPattern(patterns));
+    result = std::unique_ptr<Pattern>(new EndAnchorPattern(patterns));
   }
   else if (DigitsPattern::is_this_pattern(patterns))
   {
-    return std::unique_ptr<Pattern>(new DigitsPattern(patterns));
+    result = std::unique_ptr<Pattern>(new DigitsPattern(patterns));
   }
   else if (AlphaNumPattern::is_this_pattern(patterns))
   {
-    return std::unique_ptr<Pattern>(new AlphaNumPattern(patterns));
+    result = std::unique_ptr<Pattern>(new AlphaNumPattern(patterns));
   }
   else if (NegativeCharGroupPattern::is_this_pattern(patterns))
   {
-    return std::unique_ptr<Pattern>(new NegativeCharGroupPattern(patterns));
+    result = std::unique_ptr<Pattern>(new NegativeCharGroupPattern(patterns));
   }
   else if (PositiveCharGroupPattern::is_this_pattern(patterns))
   {
-    return std::unique_ptr<Pattern>(new PositiveCharGroupPattern(patterns));
+    result = std::unique_ptr<Pattern>(new PositiveCharGroupPattern(patterns));
   }
   else if (LiteralCharacterPattern::is_this_pattern(patterns))
   {
-    return std::unique_ptr<Pattern>(new LiteralCharacterPattern(patterns));
+    result = std::unique_ptr<Pattern>(new LiteralCharacterPattern(patterns));
   }
 
-  throw std::runtime_error("Unhandled pattern " + patterns);
-  return nullptr;
+  //check for multi pattern as these affect this pattern
+  if (OneMorePattern::is_this_pattern(patterns))
+  {
+    result->one_or_more = true;
+  }
+
+  if (result == nullptr)
+    throw std::runtime_error("Unhandled pattern " + patterns);
+
+  return result;
 }
 
 /**********************************************************************
@@ -108,6 +117,15 @@ bool StartAnchorPattern::is_this_pattern(const std::string& patterns)
 bool EndAnchorPattern::is_this_pattern(const std::string& patterns)
 {
   return patterns.compare(0, 1, "$") == 0;
+}
+
+bool OneMorePattern::is_this_pattern(std::string& patterns)
+{
+  if (patterns.compare(0, 1, "+") != 0)
+    return false;
+
+  patterns = patterns.substr(1);
+  return true;
 }
 
 
