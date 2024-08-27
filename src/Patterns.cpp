@@ -54,6 +54,10 @@ std::unique_ptr<Pattern> PatternFactory::generatePattern(std::string& patterns)
   {
     result->one_or_more = true;
   }
+  else if (OptionalPattern::is_this_pattern(patterns))
+  {
+    result->optional = true;
+  }
 
   if (result == nullptr)
     throw std::runtime_error("Unhandled pattern " + patterns);
@@ -122,6 +126,15 @@ bool EndAnchorPattern::is_this_pattern(const std::string& patterns)
 bool OneMorePattern::is_this_pattern(std::string& patterns)
 {
   if (patterns.compare(0, 1, "+") != 0)
+    return false;
+
+  patterns = patterns.substr(1);
+  return true;
+}
+
+bool OptionalPattern::is_this_pattern(std::string& patterns)
+{
+  if (patterns.compare(0, 1, "?") != 0)
     return false;
 
   patterns = patterns.substr(1);
@@ -226,8 +239,6 @@ EndAnchorPattern::EndAnchorPattern(std::string& patterns)
 std::size_t LiteralCharacterPattern::find_first_of(std::size_t pos, const std::string& input)
 {
   std::size_t newPos;
-  if (pos >= input.size())
-    throw std::runtime_error("Attempted to check for LiteralCharacterPattern beyond the string bounds");
 
   //std::cout << "checking at pos " << pos  << " and beyond from " << input << " looking for " << m_character << " found at " << input.find(m_character, pos) << std::endl;
   if ((newPos = input.find_first_of(m_character, pos)) != std::string::npos)
@@ -242,8 +253,6 @@ std::size_t LiteralCharacterPattern::find_first_of(std::size_t pos, const std::s
 std::size_t DigitsPattern::find_first_of(std::size_t pos, const std::string& input)
 {
   std::size_t newPos;
-  if (pos >= input.size())
-    throw std::runtime_error("Attempted to check for DigitsPattern beyond the string bounds");
 
   if (auto it = std::find_if(input.begin(), input.end(), ::isdigit); it != input.end())
     return distance(input.begin() + pos, it) + 1;
@@ -254,8 +263,6 @@ std::size_t DigitsPattern::find_first_of(std::size_t pos, const std::string& inp
 std::size_t AlphaNumPattern::find_first_of(std::size_t pos, const std::string& input)
 {
   std::size_t newPos;
-  if (pos >= input.size())
-    throw std::runtime_error("Attempted to check for AlphaNumPattern beyond the string bounds");
 
   if (auto it = std::find_if(input.begin(), input.end(), ::isalnum); it != input.end())
     return distance(input.begin() + pos, it) + 1;
@@ -266,8 +273,6 @@ std::size_t AlphaNumPattern::find_first_of(std::size_t pos, const std::string& i
 std::size_t PositiveCharGroupPattern::find_first_of(std::size_t pos, const std::string& input)
 {
   std::size_t newPos;
-  if (pos >= input.size())
-    throw std::runtime_error("Attempted to check for PositiveCharGroupPattern beyond the string bounds");
 
   if ((newPos = input.find_first_of(m_characters, pos)) != std::string::npos)
     return newPos + 1;
@@ -278,8 +283,6 @@ std::size_t PositiveCharGroupPattern::find_first_of(std::size_t pos, const std::
 std::size_t NegativeCharGroupPattern::find_first_of(std::size_t pos, const std::string& input)
 {
   std::size_t newPos;
-  if (pos >= input.size())
-    throw std::runtime_error("Attempted to check for NegativeCharGroupPattern beyond the string bounds");
 
   if ((newPos = input.find_first_not_of(m_characters, pos)) != std::string::npos)
     return newPos + 1;
@@ -319,9 +322,6 @@ std::size_t EndAnchorPattern::find_first_of(std::size_t pos, const std::string& 
 **********************************************************************/
 std::size_t LiteralCharacterPattern::starts_with(std::size_t pos, const std::string& input)
 {
-  if (pos >= input.size())
-    throw std::runtime_error("Attempted to check for LiteralCharacterPattern beyond the string bounds");
-
   //std::cout << "Comparing at pos " << pos << " " << input[pos] << " " << m_character << std::endl;
 
   if (input[pos] == m_character)
@@ -332,9 +332,6 @@ std::size_t LiteralCharacterPattern::starts_with(std::size_t pos, const std::str
 
 std::size_t DigitsPattern::starts_with(std::size_t pos, const std::string& input)
 {
-  if (pos >= input.size())
-    throw std::runtime_error("Attempted to check for DigitsPattern beyond the string bounds");
-
   if (::isdigit(input[pos]))
     return pos + 1;
 
@@ -343,9 +340,6 @@ std::size_t DigitsPattern::starts_with(std::size_t pos, const std::string& input
 
 std::size_t AlphaNumPattern::starts_with(std::size_t pos, const std::string& input)
 {
-  if (pos >= input.size())
-    throw std::runtime_error("Attempted to check for AlphaNumPattern beyond the string bounds");
-
   if (::isalnum(input[pos]))
     return pos + 1;
 
@@ -354,9 +348,6 @@ std::size_t AlphaNumPattern::starts_with(std::size_t pos, const std::string& inp
 
 std::size_t PositiveCharGroupPattern::starts_with(std::size_t pos, const std::string& input)
 {
-  if (pos >= input.size())
-    throw std::runtime_error("Attempted to check for PositiveCharGroupPattern beyond the string bounds");
-
   if (m_characters.find_first_of(input[pos]) != std::string::npos)
     return pos + 1;
 
@@ -365,9 +356,6 @@ std::size_t PositiveCharGroupPattern::starts_with(std::size_t pos, const std::st
 
 std::size_t NegativeCharGroupPattern::starts_with(std::size_t pos, const std::string& input)
 {
-  if (pos >= input.size())
-    throw std::runtime_error("Attempted to check for NegativeCharGroupPattern beyond the string bounds");
-
   if (m_characters.find_first_of(input[pos]) == std::string::npos)
     return pos + 1;
 

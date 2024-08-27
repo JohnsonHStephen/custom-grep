@@ -13,6 +13,7 @@ class Pattern
     virtual std::string print() { return std::string(); };
 
     bool one_or_more = false;
+    bool optional = false;
 };
 
 class PatternFactory
@@ -123,6 +124,12 @@ class EndAnchorPattern : public Pattern
 };
 
 class OneMorePattern
+{
+  public:
+    static bool is_this_pattern(std::string& patterns);
+};
+
+class OptionalPattern
 {
   public:
     static bool is_this_pattern(std::string& patterns);
