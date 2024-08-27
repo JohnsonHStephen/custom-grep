@@ -104,7 +104,7 @@ std::size_t findSubsequentPatterns(const std::string& input, std::size_t pos, in
     return pos; // success
   }
 
-  if (pos >= input.size()) // position our of bounds
+  if (pos > input.size()) // position our of bounds
   {
     //std::cout << "test 4 pattern " << pattern << " succeded\n";
     return std::string::npos;

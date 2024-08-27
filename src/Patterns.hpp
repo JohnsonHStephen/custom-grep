@@ -109,3 +109,19 @@ class StartAnchorPattern : public Pattern
   private:
     std::string m_characters = "";
 };
+
+class EndAnchorPattern : public Pattern
+{
+  public:
+    EndAnchorPattern(std::string& patterns);
+
+    std::size_t find_first_of(std::size_t pos, const std::string& input);
+    std::size_t starts_with(std::size_t pos, const std::string& input);
+
+    std::string print() {return std::string("End Anchor Pattern ") + m_characters;};
+
+    static bool is_this_pattern(const std::string& patterns);
+
+  private:
+    std::string m_characters = "";
+};

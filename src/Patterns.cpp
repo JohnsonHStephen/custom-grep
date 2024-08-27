@@ -23,6 +23,10 @@ std::unique_ptr<Pattern> PatternFactory::generatePattern(std::string& patterns)
   {
     return std::unique_ptr<Pattern>(new StartAnchorPattern(patterns));
   }
+  else if (EndAnchorPattern::is_this_pattern(patterns))
+  {
+    return std::unique_ptr<Pattern>(new EndAnchorPattern(patterns));
+  }
   else if (DigitsPattern::is_this_pattern(patterns))
   {
     return std::unique_ptr<Pattern>(new DigitsPattern(patterns));
@@ -101,6 +105,11 @@ bool StartAnchorPattern::is_this_pattern(const std::string& patterns)
   return patterns.compare(0, 1, "^") == 0;
 }
 
+bool EndAnchorPattern::is_this_pattern(const std::string& patterns)
+{
+  return patterns.compare(0, 1, "$") == 0;
+}
+
 
 /**********************************************************************
 * Pattern Constructors
@@ -168,6 +177,17 @@ StartAnchorPattern::StartAnchorPattern(std::string& patterns)
 {
   if (!is_this_pattern)
     throw std::runtime_error("Attempted to create StartAnchorPattern without proper pattern in " + patterns);
+
+  patterns = patterns.substr(1);
+}
+
+EndAnchorPattern::EndAnchorPattern(std::string& patterns)
+{
+  if (!is_this_pattern)
+    throw std::runtime_error("Attempted to create EndAnchorPattern without proper pattern in " + patterns);
+
+  if (patterns.size() != 1)  // this isnt the last pattern
+    throw std::runtime_error("End of string anchor must be the final character " + patterns);
 
   patterns = patterns.substr(1);
 }
@@ -257,6 +277,11 @@ std::size_t StartAnchorPattern::find_first_of(std::size_t pos, const std::string
   return 0;
 }
 
+std::size_t EndAnchorPattern::find_first_of(std::size_t pos, const std::string& input)
+{
+  return input.size();
+}
+
 /**********************************************************************
 * Pattern starts_with
 *
@@ -334,4 +359,12 @@ std::size_t NegativeCharGroupPattern::starts_with(std::size_t pos, const std::st
 std::size_t StartAnchorPattern::starts_with(std::size_t pos, const std::string& input)
 {
   throw std::runtime_error("Start of string anchor mus be the first character");
+}
+
+std::size_t EndAnchorPattern::starts_with(std::size_t pos, const std::string& input)
+{
+  if (pos != input.size())
+    return std::string::npos;
+
+  return input.size();
 }
