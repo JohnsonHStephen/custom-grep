@@ -19,7 +19,7 @@ class Pattern
 class PatternFactory
 {
   public:
-    static std::unique_ptr<Pattern> generatePattern(std::string& patterns);
+    static std::shared_ptr<Pattern> generatePattern(std::string& patterns);
 
 };
 
@@ -146,4 +146,10 @@ class WildcardPattern : public Pattern
     std::string print() {return std::string("Wild Card Pattern");};
 
     static bool is_this_pattern(const std::string& patterns);
+};
+
+class AlternationPattern
+{
+  public:
+    static bool is_this_pattern(std::string& patterns);
 };

@@ -16,41 +16,46 @@
 * Returns: a unique pointer to the pattern, the caller is responsible
 *     for deletion
 **********************************************************************/
-std::unique_ptr<Pattern> PatternFactory::generatePattern(std::string& patterns)
+std::shared_ptr<Pattern> PatternFactory::generatePattern(std::string& patterns)
 {
-  std::unique_ptr<Pattern> result = nullptr;
+  std::shared_ptr<Pattern> result = nullptr;
+  bool alternation = false;
   // order is important here
   if (StartAnchorPattern::is_this_pattern(patterns))
   {
-    result = std::unique_ptr<Pattern>(new StartAnchorPattern(patterns));
+    result = std::shared_ptr<Pattern>(new StartAnchorPattern(patterns));
   }
   else if (EndAnchorPattern::is_this_pattern(patterns))
   {
-    result = std::unique_ptr<Pattern>(new EndAnchorPattern(patterns));
+    result = std::shared_ptr<Pattern>(new EndAnchorPattern(patterns));
   }
   else if (DigitsPattern::is_this_pattern(patterns))
   {
-    result = std::unique_ptr<Pattern>(new DigitsPattern(patterns));
+    result = std::shared_ptr<Pattern>(new DigitsPattern(patterns));
   }
   else if (AlphaNumPattern::is_this_pattern(patterns))
   {
-    result = std::unique_ptr<Pattern>(new AlphaNumPattern(patterns));
+    result = std::shared_ptr<Pattern>(new AlphaNumPattern(patterns));
   }
   else if (NegativeCharGroupPattern::is_this_pattern(patterns))
   {
-    result = std::unique_ptr<Pattern>(new NegativeCharGroupPattern(patterns));
+    result = std::shared_ptr<Pattern>(new NegativeCharGroupPattern(patterns));
   }
   else if (PositiveCharGroupPattern::is_this_pattern(patterns))
   {
-    result = std::unique_ptr<Pattern>(new PositiveCharGroupPattern(patterns));
+    result = std::shared_ptr<Pattern>(new PositiveCharGroupPattern(patterns));
   }
   else if (WildcardPattern::is_this_pattern(patterns))
   {
-    result = std::unique_ptr<Pattern>(new WildcardPattern(patterns));
+    result = std::shared_ptr<Pattern>(new WildcardPattern(patterns));
+  }
+  else if (AlternationPattern::is_this_pattern(patterns))
+  {
+    alternation = true;
   }
   else if (LiteralCharacterPattern::is_this_pattern(patterns)) // needs to be last
   {
-    result = std::unique_ptr<Pattern>(new LiteralCharacterPattern(patterns));
+    result = std::shared_ptr<Pattern>(new LiteralCharacterPattern(patterns));
   }
 
   //check for multi pattern as these affect this pattern
@@ -63,7 +68,7 @@ std::unique_ptr<Pattern> PatternFactory::generatePattern(std::string& patterns)
     result->optional = true;
   }
 
-  if (result == nullptr)
+  if (!alternation && result == nullptr)
     throw std::runtime_error("Unhandled pattern " + patterns);
 
   return result;
@@ -148,6 +153,15 @@ bool OptionalPattern::is_this_pattern(std::string& patterns)
 bool WildcardPattern::is_this_pattern(const std::string& patterns)
 {
   return patterns.compare(0, 1, ".") == 0;
+}
+
+bool AlternationPattern::is_this_pattern(std::string& patterns)
+{
+  if (patterns.compare(0, 1, "|") != 0)
+    return false;
+
+  patterns = patterns.substr(1);
+  return true;
 }
 
 
@@ -257,7 +271,7 @@ std::size_t LiteralCharacterPattern::find_first_of(std::size_t pos, const std::s
 {
   std::size_t newPos;
 
-  //std::cout << "checking at pos " << pos  << " and beyond from " << input << " looking for " << m_character << " found at " << input.find(m_character, pos) << std::endl;
+  std::cout << "checking at pos " << pos  << " and beyond from " << input << " looking for " << m_character << " found at " << input.find(m_character, pos) << std::endl;
   if ((newPos = input.find_first_of(m_character, pos)) != std::string::npos)
   {
     //std::cout << "found at pos " << newPos  << " character " << input[newPos] << " from " << input << " looking for " << m_character << std::endl;
@@ -347,7 +361,7 @@ std::size_t WildcardPattern::find_first_of(std::size_t pos, const std::string& i
 **********************************************************************/
 std::size_t LiteralCharacterPattern::starts_with(std::size_t pos, const std::string& input)
 {
-  //std::cout << "Comparing at pos " << pos << " " << input[pos] << " " << m_character << std::endl;
+  std::cout << "Comparing at pos " << pos << " " << input[pos] << " " << m_character << std::endl;
 
   if (input[pos] == m_character)
     return pos + 1;
