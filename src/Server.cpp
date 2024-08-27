@@ -106,7 +106,7 @@ std::size_t findSubsequentPatterns(const std::string& input, std::size_t pos, in
 
   if (pos > input.size()) // position our of bounds
   {
-    //std::cout << "test 4 pattern " << pattern << " succeded\n";
+    //std::cout << "test 4 pattern " << pattern << " failed out of bounds\n";
     return std::string::npos;
   }
 
@@ -125,15 +125,18 @@ std::size_t findSubsequentPatterns(const std::string& input, std::size_t pos, in
     pos = preCheckPos;
   }
 
+  preCheckPos = pos;
   if (patternList[pattern]->one_or_more) // need to check for multiple?
   {
-    std::size_t tempPos = pos;
-    // try until it fails
-    do
+    pos = findSubsequentPatterns(input, pos, pattern, patternList);
+
+    if (newPos != std::string::npos) // subsequent pattern was found so no need to keep checking
     {
-      pos = tempPos;
-      tempPos = patternList[pattern]->starts_with(tempPos, input);
-    } while (tempPos != std::string::npos);
+      //std::cout << "test 6.5 after pattern " << pattern << " succeded\n";
+      return newPos;
+    }
+
+    pos = preCheckPos;
   }
 
   // pattern was found so go to next
@@ -165,7 +168,7 @@ bool match_patterns(const std::string& input_line, const std::string& patterns)
   while (workingPatterns.size() > 0)
   {
     patternList.emplace_back(PatternFactory::generatePattern(workingPatterns));
-    //std::cout << "Added " << patternList.back()->print() << std::endl;
+    //std::cout << "test Added " << patternList.back()->print() << std::endl;
   }
 
   while (pos < input_line.size() && tries < 100)

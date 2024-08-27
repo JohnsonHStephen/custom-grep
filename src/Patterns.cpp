@@ -44,7 +44,11 @@ std::unique_ptr<Pattern> PatternFactory::generatePattern(std::string& patterns)
   {
     result = std::unique_ptr<Pattern>(new PositiveCharGroupPattern(patterns));
   }
-  else if (LiteralCharacterPattern::is_this_pattern(patterns))
+  else if (WildcardPattern::is_this_pattern(patterns))
+  {
+    result = std::unique_ptr<Pattern>(new WildcardPattern(patterns));
+  }
+  else if (LiteralCharacterPattern::is_this_pattern(patterns)) // needs to be last
   {
     result = std::unique_ptr<Pattern>(new LiteralCharacterPattern(patterns));
   }
@@ -141,6 +145,11 @@ bool OptionalPattern::is_this_pattern(std::string& patterns)
   return true;
 }
 
+bool WildcardPattern::is_this_pattern(const std::string& patterns)
+{
+  return patterns.compare(0, 1, ".") == 0;
+}
+
 
 /**********************************************************************
 * Pattern Constructors
@@ -219,6 +228,14 @@ EndAnchorPattern::EndAnchorPattern(std::string& patterns)
 
   if (patterns.size() != 1)  // this isnt the last pattern
     throw std::runtime_error("End of string anchor must be the final character " + patterns);
+
+  patterns = patterns.substr(1);
+}
+
+WildcardPattern::WildcardPattern(std::string& patterns)
+{
+  if (!is_this_pattern)
+    throw std::runtime_error("Attempted to create WildcardPattern without proper pattern in " + patterns);
 
   patterns = patterns.substr(1);
 }
@@ -303,6 +320,14 @@ std::size_t EndAnchorPattern::find_first_of(std::size_t pos, const std::string& 
   return input.size();
 }
 
+std::size_t WildcardPattern::find_first_of(std::size_t pos, const std::string& input)
+{
+  if (pos >= input.size())
+    return std::string::npos;
+
+  return pos + 1;
+}
+
 /**********************************************************************
 * Pattern starts_with
 *
@@ -373,4 +398,12 @@ std::size_t EndAnchorPattern::starts_with(std::size_t pos, const std::string& in
     return std::string::npos;
 
   return input.size();
+}
+
+std::size_t WildcardPattern::starts_with(std::size_t pos, const std::string& input)
+{
+  if (pos >= input.size())
+    return std::string::npos;
+
+  return pos + 1;
 }
