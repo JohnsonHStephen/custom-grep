@@ -240,9 +240,6 @@ EndAnchorPattern::EndAnchorPattern(std::string& patterns)
   if (!is_this_pattern)
     throw std::runtime_error("Attempted to create EndAnchorPattern without proper pattern in " + patterns);
 
-  if (patterns.size() != 1)  // this isnt the last pattern
-    throw std::runtime_error("End of string anchor must be the final character " + patterns);
-
   patterns = patterns.substr(1);
 }
 
@@ -271,7 +268,7 @@ std::size_t LiteralCharacterPattern::find_first_of(std::size_t pos, const std::s
 {
   std::size_t newPos;
 
-  std::cout << "checking at pos " << pos  << " and beyond from " << input << " looking for " << m_character << " found at " << input.find(m_character, pos) << std::endl;
+  //std::cout << "checking at pos " << pos  << " and beyond from " << input << " looking for " << m_character << " found at " << input.find(m_character, pos) << std::endl;
   if ((newPos = input.find_first_of(m_character, pos)) != std::string::npos)
   {
     //std::cout << "found at pos " << newPos  << " character " << input[newPos] << " from " << input << " looking for " << m_character << std::endl;
@@ -361,7 +358,7 @@ std::size_t WildcardPattern::find_first_of(std::size_t pos, const std::string& i
 **********************************************************************/
 std::size_t LiteralCharacterPattern::starts_with(std::size_t pos, const std::string& input)
 {
-  std::cout << "Comparing at pos " << pos << " " << input[pos] << " " << m_character << std::endl;
+  //std::cout << "Comparing at pos " << pos << " " << input[pos] << " " << m_character << std::endl;
 
   if (input[pos] == m_character)
     return pos + 1;
