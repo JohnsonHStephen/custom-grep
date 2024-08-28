@@ -1,6 +1,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <vector>
 
 class Pattern
 {
@@ -16,11 +17,19 @@ class Pattern
     bool optional = false;
 };
 
-class PatternFactory
+class PatternHandler
 {
   public:
-    static std::size_t match_patterns(const std::string& input, const std::string& patterns, bool startsWith = false);
+    PatternHandler() = default;
+    ~PatternHandler() = default;
 
+    std::size_t match_patterns(const std::string& input, const std::string& patterns, bool startsWith = false);
+
+  private:
+    std::unique_ptr<Pattern> generatePattern(std::string& patterns);
+    std::size_t findPatterns(const std::string& input, std::size_t pos, int pattern, const std::vector<std::unique_ptr<Pattern>>& patternList, bool startsWith);
+
+    std::vector<std::shared_ptr<std::string>> m_patternReferences;
 };
 
 class LiteralCharacterPattern : public Pattern
@@ -162,4 +171,38 @@ class AlternationPattern : public Pattern
 
   private:
     std::string m_option1, m_option2;
+};
+
+class ReferencePattern : public Pattern
+{
+  public:
+    ReferencePattern(std::string& patterns, std::shared_ptr<std::string> referencePattern);
+
+    std::size_t find_first_of(std::size_t pos, const std::string& input);
+    std::size_t starts_with(std::size_t pos, const std::string& input);
+
+    std::string print() {return std::string("Reference Pattern " + m_pattern);};
+
+    static bool is_this_pattern(const std::string& patterns);
+
+  private:
+    std::shared_ptr<std::string> m_referencePattern;
+    std::string m_pattern;
+};
+
+class BackreferencePattern : public Pattern
+{
+  public:
+    BackreferencePattern(std::string& patterns, const std::vector<std::shared_ptr<std::string>>& referencedPatterns);
+
+    std::size_t find_first_of(std::size_t pos, const std::string& input);
+    std::size_t starts_with(std::size_t pos, const std::string& input);
+
+    std::string print() {return std::string("Backreference Pattern " + std::to_string(m_index));};
+
+    static bool is_this_pattern(const std::string& patterns);
+
+  private:
+    std::shared_ptr<std::string> m_referencedPattern;
+    int m_index;
 };
