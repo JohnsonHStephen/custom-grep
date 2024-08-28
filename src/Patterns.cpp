@@ -4,9 +4,11 @@
 #include <iostream>
 #include <vector>
 
-static std::size_t findSubsequentPatterns(const std::string& input, std::size_t pos, int pattern, const std::vector<std::unique_ptr<Pattern>>& patternList)
+std::unique_ptr<Pattern> generatePattern(std::string& patterns);
+
+static std::size_t findPatterns(const std::string& input, std::size_t pos, int pattern, const std::vector<std::unique_ptr<Pattern>>& patternList, bool startsWith)
 {
-  //std::cout << "test 2 " << pos << " " << pattern << std::endl;
+  //std::cout << "test 2 pos " << pos << " pattern " << pattern << std::endl;
   std::size_t newPos;
 
   if (pattern >= patternList.size())
@@ -22,9 +24,12 @@ static std::size_t findSubsequentPatterns(const std::string& input, std::size_t 
   }
 
   std::size_t preCheckPos = pos;
-  pos = patternList[pattern]->starts_with(pos, input);
+  if (startsWith)
+    pos = patternList[pattern]->starts_with(pos, input);
+  else
+    pos = patternList[pattern]->find_first_of(pos, input);
 
-  //std::cout << "test 5 " << pos << " " << pattern << std::endl;
+  //std::cout << "test 5 pos " << pos << " pattern " << pattern << std::endl;
 
   if (pos == std::string::npos) // pattern not found
   {
@@ -37,11 +42,12 @@ static std::size_t findSubsequentPatterns(const std::string& input, std::size_t 
   }
   else if (patternList[pattern]->one_or_more) // need to check for multiple?
   {
-    pos = findSubsequentPatterns(input, pos, pattern, patternList);
+    preCheckPos = pos;
+    pos = findPatterns(input, pos, pattern, patternList, true);
 
     if (pos != std::string::npos) // subsequent pattern was found so no need to keep checking
     {
-      std::cout << "test 6.5 after pattern " << pattern << " succeded\n";
+      //std::cout << "test 6.5 after pattern " << pattern << " succeded\n";
       return pos;
     }
 
@@ -51,136 +57,23 @@ static std::size_t findSubsequentPatterns(const std::string& input, std::size_t 
 
   //std::cout << "test 6.7 " << pos << " " << pattern << std::endl;
   // pattern was found so go to next
-  newPos = findSubsequentPatterns(input, pos, pattern+1, patternList);
+  newPos = findPatterns(input, pos, pattern+1, patternList, true);
 
   return newPos;
-#if 0
-  if (newPos != std::string::npos) // subsequent pattern was found
-  {
-    //std::cout << "test 7 after pattern " << pattern << " succeded\n";
-    return newPos;
-  }
-
-  //std::cout << "test 7.5 " << pos+1 << " " << pattern << std::endl;
-  // check this pattern again but a little farther on
-  return findSubsequentPatterns(input, pos+1, pattern, patternList);
-#endif
-}
-
-static std::size_t findPattern(const std::string& input, const std::vector<std::unique_ptr<Pattern>>& patternList, bool startsWith, int pattern = 0)
-{
-  std::size_t pos = 0;
-  int tries = 0;
-
-  if (pattern >= patternList.size())
-    return 0;
-
-  if (input.size() == 0)
-    return std::string::npos;
-
-  while (pos < input.size() && tries < 100)
-  {
-    tries++;
-    //std::cout << "test 0 " << pos << " " << startsWith << std::endl;
-    if (startsWith)
-    {
-      pos = patternList[pattern]->starts_with(pos, input);
-    }
-    else
-      pos = patternList[pattern]->find_first_of(pos, input);
-    std::cout << "test 1 pos " << pos << std::endl;
-
-    if (pos == std::string::npos) // first pattern failed to find any more matches
-    {
-      if (patternList[pattern]->optional)
-        return findPattern(input, patternList, startsWith, pattern+1);
-      std::cout << "test failed\n";
-      return pos;
-    }
-
-    if (!patternList[pattern]->one_or_more)
-      pattern++;
-    else
-      patternList[pattern]->optional = true; //one has already been found
-
-    std::size_t newPos = findSubsequentPatterns(input, pos, pattern, patternList);
-
-    if (newPos != std::string::npos) // subsequent pattern was found
-    {
-      //std::cout << "test succeded\n";
-      return newPos;
-    }
-  }
-
-  throw std::runtime_error("Too many tries, the while loop was stuck");
-  return pos;
 }
 
 std::size_t PatternFactory::match_patterns(const std::string& input, const std::string& patterns, bool startsWith)
 {
-  //check for split by alternate not in brackets
-  for (int i = 0; i < patterns.size(); i++)
-  {
-    // ignore everything between brackets
-    if (patterns[i] == '(')
-      i = patterns.find_last_of(')');
-
-    if (patterns[i] == '|')
-    {
-      //std::cout << "test 1 Alternate Pattern " << patterns.substr(0, i) << " input " << input << std::endl;
-      std::size_t endPos = match_patterns(input, patterns.substr(0, i), startsWith); //1st option
-      if (endPos != std::string::npos)
-        return endPos;
-      //std::cout << "test 2 Alternate Pattern " << patterns.substr(i+1) << " input " << input << std::endl;
-
-      endPos = match_patterns(input, patterns.substr(i+1), startsWith); //2nd option
-      return endPos;
-    }
-  }
-
   std::string workingPatterns = patterns;
   std::vector<std::unique_ptr<Pattern>> patternList;
 
   while (workingPatterns.size() > 0)
   {
-    if (BracketPattern::is_this_pattern(workingPatterns))
-    {
-      std::size_t endPreBracketPos = 0;
-      //pre-bracket
-      if (patternList.size() > 0)
-      {
-        //std::cout << "test Pre Bracket input " << input << std::endl;
-        endPreBracketPos = findPattern(input, patternList, startsWith);
-        if (endPreBracketPos == std::string::npos)
-          return endPreBracketPos;
-
-        startsWith = true; // force starts with as this "A(B)" is the same as "AB"
-      }
-
-      //in bracket
-      std::string bracketPatterns = workingPatterns.substr(0, workingPatterns.find_last_of(")"));
-      //std::cout << "test Bracket Pattern " << bracketPatterns << " input " << input.substr(endPreBracketPos) << std::endl;
-
-      std::size_t endBracketPos = match_patterns(input.substr(endPreBracketPos), bracketPatterns, startsWith);
-      if (endBracketPos == std::string::npos)
-        return endBracketPos;
-
-      std::size_t beginePostBracketPos = endBracketPos + endPreBracketPos; // endBracketPos is relative to endPreBracketPos so add them together
-      //post-bracket
-      bracketPatterns = workingPatterns.substr(workingPatterns.find_last_of(")")+1);
-      if (bracketPatterns.size() == 0) // no post bracket stuff
-        return endBracketPos;
-
-      //std::cout << "test Post Bracket Pattern " << bracketPatterns << " input " << input.substr(beginePostBracketPos) << std::endl;
-
-      return match_patterns(input.substr(beginePostBracketPos), bracketPatterns, true);
-    }
-
-    patternList.emplace_back(PatternFactory::generatePattern(workingPatterns));
+    patternList.emplace_back(generatePattern(workingPatterns));
     //std::cout << "test Added " << patternList.back()->print() << std::endl;
   }
 
-  return findPattern(input, patternList, startsWith);
+  return findPatterns(input, 0, 0, patternList, startsWith);
 }
 
 /**********************************************************************
@@ -196,7 +89,7 @@ std::size_t PatternFactory::match_patterns(const std::string& input, const std::
 * Returns: a unique pointer to the pattern, the caller is responsible
 *     for deletion
 **********************************************************************/
-std::unique_ptr<Pattern> PatternFactory::generatePattern(std::string& patterns)
+std::unique_ptr<Pattern> generatePattern(std::string& patterns)
 {
   std::unique_ptr<Pattern> result = nullptr;
   // order is important here
@@ -227,6 +120,10 @@ std::unique_ptr<Pattern> PatternFactory::generatePattern(std::string& patterns)
   else if (WildcardPattern::is_this_pattern(patterns))
   {
     result = std::unique_ptr<Pattern>(new WildcardPattern(patterns));
+  }
+  else if (AlternationPattern::is_this_pattern(patterns))
+  {
+    result = std::unique_ptr<Pattern>(new AlternationPattern(patterns));
   }
   else if (LiteralCharacterPattern::is_this_pattern(patterns)) // needs to be last
   {
@@ -330,25 +227,17 @@ bool WildcardPattern::is_this_pattern(const std::string& patterns)
   return patterns.compare(0, 1, ".") == 0;
 }
 
-bool AlternationPattern::is_this_pattern(std::string& patterns)
-{
-  if (patterns.compare(0, 1, "|") != 0)
-    return false;
-
-  patterns = patterns.substr(1);
-  return true;
-}
-
-bool BracketPattern::is_this_pattern(std::string& patterns)
+bool AlternationPattern::is_this_pattern(const std::string& patterns)
 {
   if (patterns.compare(0, 1, "(") != 0)
     return false;
 
-  int endPos = patterns.find(")");
-  if (endPos == std::string::npos)
-    throw std::runtime_error("Pattern missing end bracket");
+  if (patterns.find("|") == std::string::npos)
+    throw std::runtime_error("Alternation pattern missing divider '|'");
 
-  patterns = patterns.substr(1);
+  if (patterns.find(")") == std::string::npos)
+    throw std::runtime_error("Alternation pattern missing end bracket ')'");
+
   return true;
 }
 
@@ -439,6 +328,21 @@ WildcardPattern::WildcardPattern(std::string& patterns)
   patterns = patterns.substr(1);
 }
 
+AlternationPattern::AlternationPattern(std::string& patterns)
+{
+  if (!is_this_pattern)
+    throw std::runtime_error("Attempted to create AlternationPattern without proper pattern in " + patterns);
+
+  std::size_t dividerPos = patterns.find("|");
+  std::size_t endPos = patterns.find(")");
+  m_option1 = patterns.substr(1, dividerPos-1);
+  m_option2 = patterns.substr(dividerPos+1, endPos-1-dividerPos);
+
+  patterns = patterns.substr(endPos+1);
+
+  //std::cout << "test adding alternation pattern option 1: " + m_option1 + " option 2: " + m_option2 + " leftover patterns: " + patterns << std::endl;
+}
+
 /**********************************************************************
 * Pattern find_first_of
 *
@@ -456,10 +360,10 @@ std::size_t LiteralCharacterPattern::find_first_of(std::size_t pos, const std::s
 {
   std::size_t newPos;
 
-  //std::cout << "checking at pos " << pos  << " and beyond from " << input << " looking for " << m_character << " found at " << input.find(m_character, pos) << std::endl;
+  //std::cout << "test checking at pos " << pos  << " and beyond from " << input << " looking for " << m_character << " found at " << input.find(m_character, pos) << std::endl;
   if ((newPos = input.find_first_of(m_character, pos)) != std::string::npos)
   {
-    //std::cout << "found at pos " << newPos  << " character " << input[newPos] << " from " << input << " looking for " << m_character << std::endl;
+    //std::cout << "test found at pos " << newPos  << " character " << input[newPos] << " from " << input << " looking for " << m_character << std::endl;
     return newPos + 1;
   }
 
@@ -527,6 +431,25 @@ std::size_t WildcardPattern::find_first_of(std::size_t pos, const std::string& i
   return pos + 1;
 }
 
+std::size_t AlternationPattern::find_first_of(std::size_t pos, const std::string& input)
+{
+  // check if the first option succeeds
+  std::size_t result = PatternFactory::match_patterns(input.substr(pos), m_option1, false);
+
+  // first option succeeded and result is relative to pos
+  if (result != std::string::npos)
+    return result+pos;
+
+  // check if the second option succeeds
+  result = PatternFactory::match_patterns(input.substr(pos), m_option2, false);
+
+  // second option succeeded and result is relative to pos
+  if (result != std::string::npos)
+    return result+pos;
+
+  return result;
+}
+
 /**********************************************************************
 * Pattern starts_with
 *
@@ -546,7 +469,7 @@ std::size_t WildcardPattern::find_first_of(std::size_t pos, const std::string& i
 **********************************************************************/
 std::size_t LiteralCharacterPattern::starts_with(std::size_t pos, const std::string& input)
 {
-  //std::cout << "Comparing at pos " << pos << " " << input[pos] << " " << m_character << std::endl;
+  //std::cout << "test Comparing at pos " << pos << " " << input[pos] << " " << m_character << std::endl;
 
   if (input[pos] == m_character)
     return pos + 1;
@@ -588,7 +511,7 @@ std::size_t NegativeCharGroupPattern::starts_with(std::size_t pos, const std::st
 
 std::size_t StartAnchorPattern::starts_with(std::size_t pos, const std::string& input)
 {
-  throw std::runtime_error("Start of string anchor mus be the first character");
+  throw std::runtime_error("Start of string anchor must be the first character");
 }
 
 std::size_t EndAnchorPattern::starts_with(std::size_t pos, const std::string& input)
@@ -605,4 +528,23 @@ std::size_t WildcardPattern::starts_with(std::size_t pos, const std::string& inp
     return std::string::npos;
 
   return pos + 1;
+}
+
+std::size_t AlternationPattern::starts_with(std::size_t pos, const std::string& input)
+{
+  // check if the first option succeeds
+  std::size_t result = PatternFactory::match_patterns(input.substr(pos), m_option1, true);
+
+  // first option succeeded and result is relative to pos
+  if (result != std::string::npos)
+    return result+pos;
+
+  // check if the second option succeeds
+  result = PatternFactory::match_patterns(input.substr(pos), m_option2, true);
+
+  // second option succeeded and result is relative to pos
+  if (result != std::string::npos)
+    return result+pos;
+
+  return result;
 }

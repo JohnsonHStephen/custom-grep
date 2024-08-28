@@ -19,8 +19,6 @@ class Pattern
 class PatternFactory
 {
   public:
-    static std::unique_ptr<Pattern> generatePattern(std::string& patterns);
-
     static std::size_t match_patterns(const std::string& input, const std::string& patterns, bool startsWith = false);
 
 };
@@ -150,14 +148,18 @@ class WildcardPattern : public Pattern
     static bool is_this_pattern(const std::string& patterns);
 };
 
-class AlternationPattern
+class AlternationPattern : public Pattern
 {
   public:
-    static bool is_this_pattern(std::string& patterns);
-};
+    AlternationPattern(std::string& patterns);
 
-class BracketPattern
-{
-  public:
-    static bool is_this_pattern(std::string& patterns);
+    std::size_t find_first_of(std::size_t pos, const std::string& input);
+    std::size_t starts_with(std::size_t pos, const std::string& input);
+
+    std::string print() {return std::string("Alternative Pattern Option 1: " + m_option1 + " Option 2: " + m_option2);};
+
+    static bool is_this_pattern(const std::string& patterns);
+
+  private:
+    std::string m_option1, m_option2;
 };
