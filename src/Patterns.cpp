@@ -41,10 +41,10 @@ static std::size_t findSubsequentPatterns(const std::string& input, std::size_t 
   {
     pos = findSubsequentPatterns(input, pos, pattern, patternList);
 
-    if (newPos != std::string::npos) // subsequent pattern was found so no need to keep checking
+    if (pos != std::string::npos) // subsequent pattern was found so no need to keep checking
     {
-      //std::cout << "test 6.5 after pattern " << pattern << " succeded\n";
-      return newPos;
+      std::cout << "test 6.5 after pattern " << pattern << " succeded\n";
+      return pos;
     }
 
     pos = preCheckPos;
@@ -69,12 +69,12 @@ static std::size_t findSubsequentPatterns(const std::string& input, std::size_t 
 #endif
 }
 
-static std::size_t findPattern(const std::string& input, const std::vector<std::unique_ptr<Pattern>>& patternList, bool startsWith)
+static std::size_t findPattern(const std::string& input, const std::vector<std::unique_ptr<Pattern>>& patternList, bool startsWith, int pattern = 0)
 {
   std::size_t pos = 0;
   int tries = 0;
 
-  if (patternList.size() == 0)
+  if (pattern >= patternList.size())
     return 0;
 
   if (input.size() == 0)
@@ -86,11 +86,11 @@ static std::size_t findPattern(const std::string& input, const std::vector<std::
     //std::cout << "test 0 " << pos << " " << startsWith << std::endl;
     if (startsWith)
     {
-      pos = patternList[0]->starts_with(pos, input);
+      pos = patternList[pattern]->starts_with(pos, input);
     }
     else
-      pos = patternList[0]->find_first_of(pos, input);
-    //std::cout << "test 1 " << pos << std::endl;
+      pos = patternList[pattern]->find_first_of(pos, input);
+    std::cout << "test 1 pos " << pos << std::endl;
 
     if (pos == std::string::npos) // first pattern failed to find any more matches
     {
@@ -98,7 +98,7 @@ static std::size_t findPattern(const std::string& input, const std::vector<std::
       return pos;
     }
 
-    std::size_t newPos = findSubsequentPatterns(input, pos, 1, patternList);
+    std::size_t newPos = findSubsequentPatterns(input, pos, pattern+1, patternList);
 
     if (newPos != std::string::npos) // subsequent pattern was found
     {
