@@ -35,9 +35,7 @@ static std::size_t findSubsequentPatterns(const std::string& input, std::size_t 
     }
     pos = preCheckPos;
   }
-
-  preCheckPos = pos;
-  if (patternList[pattern]->one_or_more) // need to check for multiple?
+  else if (patternList[pattern]->one_or_more) // need to check for multiple?
   {
     pos = findSubsequentPatterns(input, pos, pattern, patternList);
 
@@ -94,11 +92,18 @@ static std::size_t findPattern(const std::string& input, const std::vector<std::
 
     if (pos == std::string::npos) // first pattern failed to find any more matches
     {
-      //std::cout << "test failed\n";
+      if (patternList[pattern]->optional)
+        return findPattern(input, patternList, startsWith, pattern+1);
+      std::cout << "test failed\n";
       return pos;
     }
 
-    std::size_t newPos = findSubsequentPatterns(input, pos, pattern+1, patternList);
+    if (!patternList[pattern]->one_or_more)
+      pattern++;
+    else
+      patternList[pattern]->optional = true; //one has already been found
+
+    std::size_t newPos = findSubsequentPatterns(input, pos, pattern, patternList);
 
     if (newPos != std::string::npos) // subsequent pattern was found
     {
