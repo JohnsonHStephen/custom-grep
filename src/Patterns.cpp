@@ -184,7 +184,7 @@ std::unique_ptr<Pattern> PatternHandler::generatePattern(std::string& patterns)
   }
   else if (BackreferencePattern::is_this_pattern(patterns))
   {
-    result = std::unique_ptr<Pattern>(new BackreferencePattern(patterns, m_patternReferences));
+    result = std::unique_ptr<Pattern>(new BackreferencePattern(patterns, &m_patternReferences));
   }
   else if (LiteralCharacterPattern::is_this_pattern(patterns)) // needs to be last
   {
@@ -448,7 +448,7 @@ ReferencePattern::ReferencePattern(std::string& patterns, std::shared_ptr<std::s
   //std::cout << "test adding reference pattern: " + m_pattern + " leftover patterns: " + patterns << std::endl;
 }
 
-BackreferencePattern::BackreferencePattern(std::string& patterns, const std::vector<std::shared_ptr<std::string>>& referencedPatterns)
+BackreferencePattern::BackreferencePattern(std::string& patterns, std::vector<std::shared_ptr<std::string>>* referencedPatterns)
 {
   if (!is_this_pattern)
     throw std::runtime_error("Attempted to create BackreferencePattern without proper pattern in " + patterns);
@@ -456,10 +456,7 @@ BackreferencePattern::BackreferencePattern(std::string& patterns, const std::vec
   m_index = patterns[1] - '0' - 1;
   //std::cout << "test creating backreference with from " + patterns.substr(1, 1) + " to get index " << m_index << std::endl;
 
-  if (m_index >= referencedPatterns.size())
-    throw std::runtime_error("Attempted to create BackreferencePattern to an undeclared pattern");
-
-  m_referencedPattern = referencedPatterns[m_index];
+  m_referencedPatterns = referencedPatterns;
 
   patterns = patterns.substr(2);
 }
@@ -604,14 +601,19 @@ std::size_t BackreferencePattern::find_first_of(std::size_t pos, const std::stri
 {
   std::size_t newPos;
 
-  if (m_referencedPattern == nullptr)
+  if (m_index >= m_referencedPatterns->size())
+    throw std::runtime_error("Attempted to create BackreferencePattern to an undeclared pattern");
+
+  std::shared_ptr<std::string> referencedPattern = m_referencedPatterns->at(m_index);
+
+  if (referencedPattern == nullptr)
     throw std::runtime_error("Checking BackreferencePattern of undefined pattern index " + m_index);
 
-  //std::cout << "test checking at pos " << pos  << " and beyond from " << input << " looking for " << *m_referencedPattern << " found at " << input.find_first_of(*m_referencedPattern, pos) << std::endl;
-  if ((newPos = input.find_first_of(*m_referencedPattern, pos)) != std::string::npos)
+  //std::cout << "test checking at pos " << pos  << " and beyond from " << input << " looking for " << *referencedPattern << " found at " << input.find_first_of(*referencedPattern, pos) << std::endl;
+  if ((newPos = input.find_first_of(*referencedPattern, pos)) != std::string::npos)
   {
-    //std::cout << "test found at pos " << newPos  << " string " << *m_referencedPattern << " from " << input << " leftovers " << input.substr(newPos + m_referencedPattern->size()) << std::endl;
-    return newPos + m_referencedPattern->size();
+    //std::cout << "test found at pos " << newPos  << " string " << *referencedPattern << " from " << input << " leftovers " << input.substr(newPos + referencedPattern->size()) << std::endl;
+    return newPos + referencedPattern->size();
   }
 
   return std::string::npos;
@@ -747,12 +749,17 @@ std::size_t ReferencePattern::starts_with(std::size_t pos, const std::string& in
 
 std::size_t BackreferencePattern::starts_with(std::size_t pos, const std::string& input)
 {
-  if (m_referencedPattern == nullptr)
+  if (m_index >= m_referencedPatterns->size())
+    throw std::runtime_error("Attempted to create BackreferencePattern to an undeclared pattern");
+
+  std::shared_ptr<std::string> referencedPattern = m_referencedPatterns->at(m_index);
+
+  if (referencedPattern == nullptr)
     throw std::runtime_error("Checking BackreferencePattern of undefined pattern index " + m_index);
 
-  //std::cout << "test comparing " << input.substr(pos, m_referencedPattern->size()) << " to " << *m_referencedPattern << std::endl;
-  if (input.compare(pos, m_referencedPattern->size(), *m_referencedPattern) == 0)
-    return pos + m_referencedPattern->size();
+  //std::cout << "test comparing " << input.substr(pos, referencedPattern->size()) << " to " << *referencedPattern << std::endl;
+  if (input.compare(pos, referencedPattern->size(), *referencedPattern) == 0)
+    return pos + referencedPattern->size();
 
   return std::string::npos;
 }

@@ -197,7 +197,7 @@ class ReferencePattern : public Pattern
 class BackreferencePattern : public Pattern
 {
   public:
-    BackreferencePattern(std::string& patterns, const std::vector<std::shared_ptr<std::string>>& referencedPatterns);
+    BackreferencePattern(std::string& patterns, std::vector<std::shared_ptr<std::string>>* referencedPatterns);
 
     std::size_t find_first_of(std::size_t pos, const std::string& input);
     std::size_t starts_with(std::size_t pos, const std::string& input);
@@ -207,6 +207,6 @@ class BackreferencePattern : public Pattern
     static bool is_this_pattern(const std::string& patterns);
 
   private:
-    std::shared_ptr<std::string> m_referencedPattern;
+    std::vector<std::shared_ptr<std::string>>* m_referencedPatterns;
     int m_index;
 };
