@@ -160,7 +160,7 @@ class WildcardPattern : public Pattern
 class AlternationPattern : public Pattern
 {
   public:
-    AlternationPattern(std::string& patterns, std::shared_ptr<std::string> referencePattern);
+    AlternationPattern(std::string& patterns, std::shared_ptr<std::string> referencePattern, PatternHandler* handler);
 
     std::size_t find_first_of(std::size_t pos, const std::string& input);
     std::size_t starts_with(std::size_t pos, const std::string& input);
@@ -170,6 +170,7 @@ class AlternationPattern : public Pattern
     static bool is_this_pattern(const std::string& patterns);
 
   private:
+    PatternHandler* m_handler;
     std::string m_option1, m_option2;
     std::shared_ptr<std::string> m_referencePattern;
     std::string m_pattern;
@@ -178,7 +179,7 @@ class AlternationPattern : public Pattern
 class ReferencePattern : public Pattern
 {
   public:
-    ReferencePattern(std::string& patterns, std::shared_ptr<std::string> referencePattern);
+    ReferencePattern(std::string& patterns, std::shared_ptr<std::string> referencePattern, PatternHandler* handler);
 
     std::size_t find_first_of(std::size_t pos, const std::string& input);
     std::size_t starts_with(std::size_t pos, const std::string& input);
@@ -188,6 +189,7 @@ class ReferencePattern : public Pattern
     static bool is_this_pattern(const std::string& patterns);
 
   private:
+    PatternHandler* m_handler;
     std::shared_ptr<std::string> m_referencePattern;
     std::string m_pattern;
 };
