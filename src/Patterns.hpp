@@ -160,7 +160,7 @@ class WildcardPattern : public Pattern
 class AlternationPattern : public Pattern
 {
   public:
-    AlternationPattern(std::string& patterns);
+    AlternationPattern(std::string& patterns, std::shared_ptr<std::string> referencePattern);
 
     std::size_t find_first_of(std::size_t pos, const std::string& input);
     std::size_t starts_with(std::size_t pos, const std::string& input);
@@ -171,6 +171,8 @@ class AlternationPattern : public Pattern
 
   private:
     std::string m_option1, m_option2;
+    std::shared_ptr<std::string> m_referencePattern;
+    std::string m_pattern;
 };
 
 class ReferencePattern : public Pattern
