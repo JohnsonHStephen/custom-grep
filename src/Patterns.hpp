@@ -14,6 +14,7 @@ class Pattern
 
     bool one_or_more = false;
     bool optional = false;
+    bool forceStart = false;
 };
 
 class PatternHandler
