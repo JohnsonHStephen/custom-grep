@@ -25,10 +25,13 @@ class PatternHandler
     std::size_t match_patterns(const std::string& input, const std::string& patterns, bool startsWith = false);
 
   private:
+    std::size_t findPatterns(const std::string& input, std::size_t pos, int pattern, bool startsWith);
     std::unique_ptr<Pattern> generatePattern(std::string& patterns);
-    std::size_t findPatterns(const std::string& input, std::size_t pos, int pattern, const std::vector<std::unique_ptr<Pattern>>& patternList, bool startsWith);
 
+    std::vector<std::unique_ptr<Pattern>> m_patternList;
     std::vector<std::shared_ptr<std::string>> m_patternReferences;
+    std::vector<std::shared_ptr<std::size_t>> m_referenceStarts;
+    std::vector<int> m_referenceIndexs;
 };
 
 class LiteralCharacterPattern : public Pattern
@@ -159,7 +162,7 @@ class WildcardPattern : public Pattern
 class AlternationPattern : public Pattern
 {
   public:
-    AlternationPattern(std::string& patterns, std::shared_ptr<std::string> referencePattern, PatternHandler* handler);
+    AlternationPattern(std::string& patterns);
 
     std::size_t find_first_of(std::size_t pos, const std::string& input);
     std::size_t starts_with(std::size_t pos, const std::string& input);
@@ -169,28 +172,41 @@ class AlternationPattern : public Pattern
     static bool is_this_pattern(const std::string& patterns);
 
   private:
-    PatternHandler* m_handler;
     std::string m_option1, m_option2;
-    std::shared_ptr<std::string> m_referencePattern;
-    std::string m_pattern;
 };
 
 class ReferencePattern : public Pattern
 {
   public:
-    ReferencePattern(std::string& patterns, std::shared_ptr<std::string> referencePattern, PatternHandler* handler);
+    ReferencePattern(std::string& patterns, std::shared_ptr<std::size_t> referenceStart, int index);
 
     std::size_t find_first_of(std::size_t pos, const std::string& input);
     std::size_t starts_with(std::size_t pos, const std::string& input);
 
-    std::string print() {return std::string("Reference Pattern " + m_pattern);};
+    std::string print() {return std::string("Reference Pattern " + std::to_string(m_index));};
 
     static bool is_this_pattern(const std::string& patterns);
 
   private:
-    PatternHandler* m_handler;
+    std::shared_ptr<std::size_t> m_referenceStart;
+    int m_index;
+};
+
+class EndReferencePattern : public Pattern
+{
+  public:
+    EndReferencePattern(std::string& patterns, std::shared_ptr<std::string> referencePattern, std::shared_ptr<std::size_t> referenceStart);
+
+    std::size_t find_first_of(std::size_t pos, const std::string& input);
+    std::size_t starts_with(std::size_t pos, const std::string& input);
+
+    std::string print() {return std::string("End Reference Pattern");};
+
+    static bool is_this_pattern(const std::string& patterns);
+
+  private:
     std::shared_ptr<std::string> m_referencePattern;
-    std::string m_pattern;
+    std::shared_ptr<std::size_t> m_referenceStart;
 };
 
 class BackreferencePattern : public Pattern
