@@ -89,7 +89,7 @@ std::size_t findAlternateMarker(std::size_t pos, const std::string& input)
 }
 
 /**********************************************************************
- * match_patterns
+ * PatternHandler
  *
  * Description: Grabs all of the patterns then calls a recursive parser
  *
@@ -101,19 +101,17 @@ std::size_t findAlternateMarker(std::size_t pos, const std::string& input)
  * Returns: the position after all of the patterns have been matched
  *      npos if no match
  *********************************************************************/
-std::size_t PatternHandler::match_patterns(const std::string& input, const std::string& patterns, bool startsWith)
+PatternHandler::PatternHandler(const std::string& input, const std::string& patterns, bool startsWith)
+: m_patternList(), m_patternReferences(), m_referenceStarts(), m_referenceIndexs()
 {
   std::string workingPatterns = patterns;
 
   while (workingPatterns.size() > 0)
   {
-    m_patternList.emplace_back(generatePattern(workingPatterns));
-#if DEBUGGING
-    std::cout << "Added " << m_patternList.back()->print() << std::endl;
-#endif
+    addPatternFromPatternString(workingPatterns);
   }
 
-  return findPatterns(input, 0, 0, startsWith);
+  m_result = findPatterns(input, 0, 0, startsWith);
 }
 
 /**********************************************************************
@@ -223,7 +221,7 @@ std::size_t PatternHandler::findPatterns(const std::string& input, std::size_t p
 }
 
 /**********************************************************************
- * generatePattern
+ * addPatternFromPatternString
  *
  * Description: Generates the appropriate pattern based on the initial
  *     pattern in the patterns string. The used pattern is removed
@@ -231,44 +229,41 @@ std::size_t PatternHandler::findPatterns(const std::string& input, std::size_t p
  * Parameters:
  *   patterns: string of all patterns desired, will have used pattern
  *       removed
- *
- * Returns: a unique pointer to the pattern, the caller is responsible
- *     for deletion
  *********************************************************************/
-std::unique_ptr<Pattern> PatternHandler::generatePattern(std::string& patterns)
+void PatternHandler::addPatternFromPatternString(std::string& patterns)
 {
   // referenceIndex tracks the total references added
   static int referenceIndex = 0;
+  std::size_t prevSize = m_patternList.size();
 
-  std::unique_ptr<Pattern> result = nullptr;
   // order is important here
   if (StartAnchorPattern::is_this_pattern(patterns))
   {
-    result = std::unique_ptr<Pattern>(new StartAnchorPattern(patterns));
+    m_patternList.emplace_back(new StartAnchorPattern(patterns));
   }
   else if (EndAnchorPattern::is_this_pattern(patterns))
   {
-    result = std::unique_ptr<Pattern>(new EndAnchorPattern(patterns));
+    m_patternList.emplace_back(new EndAnchorPattern(patterns));
   }
   else if (DigitsPattern::is_this_pattern(patterns))
   {
-    result = std::unique_ptr<Pattern>(new DigitsPattern(patterns));
+    m_patternList.emplace_back(new DigitsPattern(patterns));
   }
   else if (AlphaNumPattern::is_this_pattern(patterns))
   {
-    result = std::unique_ptr<Pattern>(new AlphaNumPattern(patterns));
+    m_patternList.emplace_back(new AlphaNumPattern(patterns));
   }
   else if (NegativeCharGroupPattern::is_this_pattern(patterns))
   {
-    result = std::unique_ptr<Pattern>(new NegativeCharGroupPattern(patterns));
+    m_patternList.emplace_back(new NegativeCharGroupPattern(patterns));
   }
   else if (PositiveCharGroupPattern::is_this_pattern(patterns))
   {
-    result = std::unique_ptr<Pattern>(new PositiveCharGroupPattern(patterns));
+    m_patternList.emplace_back(new PositiveCharGroupPattern(patterns));
   }
   else if (WildcardPattern::is_this_pattern(patterns))
   {
-    result = std::unique_ptr<Pattern>(new WildcardPattern(patterns));
+    m_patternList.emplace_back(new WildcardPattern(patterns));
   }
   else if (AlternationPattern::is_this_pattern(patterns))
   {
@@ -283,7 +278,8 @@ std::unique_ptr<Pattern> PatternHandler::generatePattern(std::string& patterns)
     std::cout << "starting reference " << referenceIndex << std::endl;
 #endif
 
-    result = std::unique_ptr<Pattern>(new AlternationPattern(patterns));
+    m_patternList.emplace_back(new ReferencePattern(patterns, referenceStart, referenceIndex++));
+    m_patternList.emplace_back(new AlternationPattern(patterns));
   }
   else if (ReferencePattern::is_this_pattern(patterns))
   {
@@ -298,7 +294,7 @@ std::unique_ptr<Pattern> PatternHandler::generatePattern(std::string& patterns)
     std::cout << "starting reference " << referenceIndex << std::endl;
 #endif
 
-    result = std::unique_ptr<Pattern>(new ReferencePattern(patterns, referenceStart, referenceIndex++));
+    m_patternList.emplace_back(new ReferencePattern(patterns, referenceStart, referenceIndex++));
   }
   else if (EndReferencePattern::is_this_pattern(patterns))
   {
@@ -308,40 +304,42 @@ std::unique_ptr<Pattern> PatternHandler::generatePattern(std::string& patterns)
 #if DEBUGGING
     std::cout << "ending reference " << m_referenceIndexs.back() << std::endl;
 #endif
-    result = std::unique_ptr<Pattern>(new EndReferencePattern(patterns, m_patternReferences[m_referenceIndexs.back()], m_referenceStarts[m_referenceIndexs.back()]));
+
+    m_patternList.emplace_back(new EndReferencePattern(patterns, m_patternReferences[m_referenceIndexs.back()], m_referenceStarts[m_referenceIndexs.back()]));
     m_referenceIndexs.pop_back();
   }
   else if (BackreferencePattern::is_this_pattern(patterns))
   {
-    result = std::unique_ptr<Pattern>(new BackreferencePattern(patterns, &m_patternReferences));
+    m_patternList.emplace_back(new BackreferencePattern(patterns, &m_patternReferences));
   }
   else if (LiteralCharacterPattern::is_this_pattern(patterns)) // needs to be last
   {
-    result = std::unique_ptr<Pattern>(new LiteralCharacterPattern(patterns));
+    m_patternList.emplace_back(new LiteralCharacterPattern(patterns));
   }
 
   //check for multi pattern as these affect this pattern
   if (OneMorePattern::is_this_pattern(patterns))
   {
-    result->one_or_more = true;
+    m_patternList.back()->one_or_more = true;
 #if DEBUGGING
     std::cout << "made pattern 1 or more" << std::endl;
 #endif
-
   }
   else if (OptionalPattern::is_this_pattern(patterns))
   {
-    result->optional = true;
+    m_patternList.back()->optional = true;
 #if DEBUGGING
     std::cout << "made pattern optional" << std::endl;
 #endif
 
   }
 
-  if (result == nullptr)
+  if (prevSize == m_patternList.size())
     throw std::runtime_error("Unhandled pattern " + patterns);
 
-  return result;
+#if DEBUGGING
+    std::cout << "Added " << m_patternList.back()->print() << std::endl;
+#endif
 }
 
 /**********************************************************************
@@ -560,7 +558,7 @@ AlternationPattern::AlternationPattern(std::string& patterns)
 
   std::size_t endPos = findMatchingEndBracket(0, patterns);
   std::size_t dividerPos = findAlternateMarker(0, patterns);
-  m_option1 = patterns.substr(1, dividerPos-1);
+  m_option1 = patterns.substr(0, dividerPos);
   m_option2 = patterns.substr(dividerPos+1, endPos-1-dividerPos);
 
   // leave in closing bracket to finish adding the reference
@@ -710,16 +708,30 @@ std::size_t WildcardPattern::find_first_of(std::size_t pos, const std::string& i
 
 std::size_t AlternationPattern::find_first_of(std::size_t pos, const std::string& input)
 {
-  PatternHandler handler = PatternHandler();
+#if DEBUGGING
+  std::cout << "entering option 1 with input " << input.substr(pos) << " patterns " << m_option1 << std::endl;
+#endif
+
   // check if the first option succeeds
-  std::size_t result = handler.match_patterns(input.substr(pos), m_option1, false);
+  std::size_t result = PatternHandler(input.substr(pos), m_option1, false);
+
+#if DEBUGGING
+  std::cout << "leaving option 1 with input " << input.substr(pos) << " patterns " << m_option1 << " result " << result << std::endl;
+#endif
 
   // first option succeeded and result is relative to pos
   if (result != std::string::npos)
     return result+pos;
 
+#if DEBUGGING
+  std::cout << "entering option 2 with input " << input.substr(pos) << " patterns " << m_option2 << std::endl;
+#endif
   // check if the second option succeeds
-  result = handler.match_patterns(input.substr(pos), m_option2, false);
+  result = PatternHandler(input.substr(pos), m_option2, false);
+
+#if DEBUGGING
+  std::cout << "leaving option 2 with input " << input.substr(pos) << " patterns " << m_option2 << " result " << result << std::endl;
+#endif
 
   // second option succeeded and result is relative to pos
   if (result != std::string::npos)
@@ -741,11 +753,15 @@ std::size_t ReferencePattern::find_first_of(std::size_t pos, const std::string& 
 
 std::size_t EndReferencePattern::find_first_of(std::size_t pos, const std::string& input)
 {
+#if DEBUGGING
+  std::cout << "found reference that started at " << *m_referenceStart << " ended at " << pos << std::endl;
+#endif
+
   // save the input that matched
   *m_referencePattern = input.substr(*m_referenceStart, pos - *m_referenceStart);
 
 #if DEBUGGING
-  std::cout << "found reference to check later: " + *m_referencePattern << std::endl;
+  std::cout << "found reference to check later: " + *m_referencePattern + " started at " << *m_referenceStart << " ended at " << pos << std::endl;
 #endif
 
   return pos;
@@ -861,16 +877,30 @@ std::size_t WildcardPattern::starts_with(std::size_t pos, const std::string& inp
 
 std::size_t AlternationPattern::starts_with(std::size_t pos, const std::string& input)
 {
-  PatternHandler handler = PatternHandler();
+#if DEBUGGING
+  std::cout << "entering option 1 with input " << input.substr(pos) << " patterns " << m_option1 << std::endl;
+#endif
+
   // check if the first option succeeds
-  std::size_t result = handler.match_patterns(input.substr(pos), m_option1, true);
+  std::size_t result = PatternHandler(input.substr(pos), m_option1, true);
+
+#if DEBUGGING
+  std::cout << "leaving option 1 with input " << input.substr(pos) << " patterns " << m_option1 << " result " << result << std::endl;
+#endif
 
   // first option succeeded and result is relative to pos
   if (result != std::string::npos)
     return result+pos;
 
+#if DEBUGGING
+  std::cout << "entering option 2 with input " << input.substr(pos) << " patterns " << m_option2 << std::endl;
+#endif
   // check if the second option succeeds
-  result = handler.match_patterns(input.substr(pos), m_option2, true);
+  result = PatternHandler(input.substr(pos), m_option2, true);
+
+#if DEBUGGING
+  std::cout << "leaving option 2 with input " << input.substr(pos) << " patterns " << m_option2 << " result " << result << std::endl;
+#endif
 
   // second option succeeded and result is relative to pos
   if (result != std::string::npos)

@@ -19,15 +19,17 @@ class Pattern
 class PatternHandler
 {
   public:
-    PatternHandler() = default;
+    PatternHandler(const std::string& input, const std::string& patterns, bool startsWith = false);
     ~PatternHandler() = default;
 
-    std::size_t match_patterns(const std::string& input, const std::string& patterns, bool startsWith = false);
+    operator std::size_t() const { return m_result; };
+    operator bool() const { return m_result != std::string::npos; };
 
   private:
     std::size_t findPatterns(const std::string& input, std::size_t pos, int pattern, bool startsWith);
-    std::unique_ptr<Pattern> generatePattern(std::string& patterns);
+    void addPatternFromPatternString(std::string& patterns);
 
+    std::size_t m_result = false;
     std::vector<std::unique_ptr<Pattern>> m_patternList;
     std::vector<std::shared_ptr<std::string>> m_patternReferences;
     std::vector<std::shared_ptr<std::size_t>> m_referenceStarts;

@@ -32,8 +32,7 @@ int main(int argc, char* argv[])
 
   try
   {
-    PatternHandler handler = PatternHandler();
-    if (handler.match_patterns(input_line, pattern) != std::string::npos)
+    if (PatternHandler(input_line, pattern))
     {
       std::cout << "found\n";
       return 0;
