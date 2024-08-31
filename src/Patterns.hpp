@@ -41,6 +41,7 @@ class LiteralCharacterPattern : public Pattern
 {
   public:
     LiteralCharacterPattern(std::string& patterns);
+    ~LiteralCharacterPattern() = default;
 
     std::size_t find_first_of(std::size_t pos, const std::string& input);
     std::size_t starts_with(std::size_t pos, const std::string& input);
@@ -57,6 +58,7 @@ class DigitsPattern : public Pattern
 {
   public:
     DigitsPattern(std::string& patterns);
+    ~DigitsPattern() = default;
 
     std::size_t find_first_of(std::size_t pos, const std::string& input);
     std::size_t starts_with(std::size_t pos, const std::string& input);
@@ -70,6 +72,7 @@ class AlphaNumPattern : public Pattern
 {
   public:
     AlphaNumPattern(std::string& patterns);
+    ~AlphaNumPattern() = default;
 
     std::size_t find_first_of(std::size_t pos, const std::string& input);
     std::size_t starts_with(std::size_t pos, const std::string& input);
@@ -83,6 +86,7 @@ class PositiveCharGroupPattern : public Pattern
 {
   public:
     PositiveCharGroupPattern(std::string& patterns);
+    ~PositiveCharGroupPattern() = default;
 
     std::size_t find_first_of(std::size_t pos, const std::string& input);
     std::size_t starts_with(std::size_t pos, const std::string& input);
@@ -99,6 +103,7 @@ class NegativeCharGroupPattern : public Pattern
 {
   public:
     NegativeCharGroupPattern(std::string& patterns);
+    ~NegativeCharGroupPattern() = default;
 
     std::size_t find_first_of(std::size_t pos, const std::string& input);
     std::size_t starts_with(std::size_t pos, const std::string& input);
@@ -115,6 +120,7 @@ class StartAnchorPattern : public Pattern
 {
   public:
     StartAnchorPattern(std::string& patterns);
+    ~StartAnchorPattern() = default;
 
     std::size_t find_first_of(std::size_t pos, const std::string& input);
     std::size_t starts_with(std::size_t pos, const std::string& input);
@@ -128,6 +134,7 @@ class EndAnchorPattern : public Pattern
 {
   public:
     EndAnchorPattern(std::string& patterns);
+    ~EndAnchorPattern() = default;
 
     std::size_t find_first_of(std::size_t pos, const std::string& input);
     std::size_t starts_with(std::size_t pos, const std::string& input);
@@ -153,6 +160,7 @@ class WildcardPattern : public Pattern
 {
   public:
     WildcardPattern(std::string& patterns);
+    ~WildcardPattern() = default;
 
     std::size_t find_first_of(std::size_t pos, const std::string& input);
     std::size_t starts_with(std::size_t pos, const std::string& input);
@@ -166,6 +174,7 @@ class AlternationPattern : public Pattern
 {
   public:
     AlternationPattern(std::string& patterns);
+    ~AlternationPattern() = default;
 
     std::size_t find_first_of(std::size_t pos, const std::string& input);
     std::size_t starts_with(std::size_t pos, const std::string& input);
@@ -181,7 +190,8 @@ class AlternationPattern : public Pattern
 class ReferencePattern : public Pattern
 {
   public:
-    ReferencePattern(std::string& patterns, std::shared_ptr<std::size_t> referenceStart, int index);
+    ReferencePattern(std::string& patterns, const std::shared_ptr<std::size_t>& referenceStart, int index);
+    ~ReferencePattern() = default;
 
     std::size_t find_first_of(std::size_t pos, const std::string& input);
     std::size_t starts_with(std::size_t pos, const std::string& input);
@@ -191,14 +201,15 @@ class ReferencePattern : public Pattern
     static bool is_this_pattern(const std::string& patterns);
 
   private:
-    std::shared_ptr<std::size_t> m_referenceStart;
+    std::weak_ptr<std::size_t> m_referenceStart;
     int m_index;
 };
 
 class EndReferencePattern : public Pattern
 {
   public:
-    EndReferencePattern(std::string& patterns, std::shared_ptr<std::string> referencePattern, std::shared_ptr<std::size_t> referenceStart);
+    EndReferencePattern(std::string& patterns, const std::shared_ptr<std::string>& referencePattern, const std::shared_ptr<std::size_t>& referenceStart);
+    ~EndReferencePattern() = default;
 
     std::size_t find_first_of(std::size_t pos, const std::string& input);
     std::size_t starts_with(std::size_t pos, const std::string& input);
@@ -208,14 +219,15 @@ class EndReferencePattern : public Pattern
     static bool is_this_pattern(const std::string& patterns);
 
   private:
-    std::shared_ptr<std::string> m_referencePattern;
-    std::shared_ptr<std::size_t> m_referenceStart;
+    std::weak_ptr<std::string> m_referencePattern;
+    std::weak_ptr<std::size_t> m_referenceStart;
 };
 
 class BackreferencePattern : public Pattern
 {
   public:
-    BackreferencePattern(std::string& patterns, std::vector<std::shared_ptr<std::string>>* referencedPatterns);
+    BackreferencePattern(std::string& patterns, const std::vector<std::shared_ptr<std::string>>& referencedPatterns);
+    ~BackreferencePattern() = default;
 
     std::size_t find_first_of(std::size_t pos, const std::string& input);
     std::size_t starts_with(std::size_t pos, const std::string& input);
@@ -225,6 +237,6 @@ class BackreferencePattern : public Pattern
     static bool is_this_pattern(const std::string& patterns);
 
   private:
-    std::vector<std::shared_ptr<std::string>>* m_referencedPatterns;
+    std::weak_ptr<std::string> m_referencedPattern;
     int m_index;
 };

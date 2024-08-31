@@ -314,7 +314,7 @@ void PatternHandler::addPatternFromPatternString(std::string& patterns)
   }
   else if (BackreferencePattern::is_this_pattern(patterns))
   {
-    m_patternList.emplace_back(new BackreferencePattern(patterns, &m_patternReferences));
+    m_patternList.emplace_back(new BackreferencePattern(patterns, m_patternReferences));
   }
   else if (LiteralCharacterPattern::is_this_pattern(patterns)) // needs to be last
   {
@@ -575,7 +575,7 @@ AlternationPattern::AlternationPattern(std::string& patterns)
 #endif
 }
 
-ReferencePattern::ReferencePattern(std::string& patterns, std::shared_ptr<std::size_t> referenceStart, int index)
+ReferencePattern::ReferencePattern(std::string& patterns, const std::shared_ptr<std::size_t>& referenceStart, int index)
 {
   if (!is_this_pattern)
     throw std::runtime_error("Attempted to create ReferencePattern without proper pattern in " + patterns);
@@ -590,7 +590,7 @@ ReferencePattern::ReferencePattern(std::string& patterns, std::shared_ptr<std::s
 #endif
 }
 
-EndReferencePattern::EndReferencePattern(std::string& patterns, std::shared_ptr<std::string> referencePattern, std::shared_ptr<std::size_t> referenceStart)
+EndReferencePattern::EndReferencePattern(std::string& patterns, const std::shared_ptr<std::string>& referencePattern, const std::shared_ptr<std::size_t>& referenceStart)
 {
   if (!is_this_pattern)
     throw std::runtime_error("Attempted to create EndReferencePattern without proper pattern in " + patterns);
@@ -605,7 +605,7 @@ EndReferencePattern::EndReferencePattern(std::string& patterns, std::shared_ptr<
 #endif
 }
 
-BackreferencePattern::BackreferencePattern(std::string& patterns, std::vector<std::shared_ptr<std::string>>* referencedPatterns)
+BackreferencePattern::BackreferencePattern(std::string& patterns, const std::vector<std::shared_ptr<std::string>>& referencedPatterns)
 {
   if (!is_this_pattern)
     throw std::runtime_error("Attempted to create BackreferencePattern without proper pattern in " + patterns);
@@ -615,7 +615,10 @@ BackreferencePattern::BackreferencePattern(std::string& patterns, std::vector<st
   std::cout << "creating backreference with from " + patterns.substr(1, 1) + " to get index " << m_index << std::endl;
 #endif
 
-  m_referencedPatterns = referencedPatterns;
+  if (m_index >= referencedPatterns.size())
+    throw std::runtime_error("Attempted to create BackreferencePattern to an undeclared pattern");
+
+  m_referencedPattern = referencedPatterns.at(m_index);
 
   patterns = patterns.substr(2);
 }
@@ -748,7 +751,11 @@ std::size_t AlternationPattern::find_first_of(std::size_t pos, const std::string
 
 std::size_t ReferencePattern::find_first_of(std::size_t pos, const std::string& input)
 {
-  *m_referenceStart = pos;
+  if (m_referenceStart.expired())
+    throw std::runtime_error("Attempted to access expired memory");
+
+  std::shared_ptr<std::size_t> referenceStart = m_referenceStart.lock();
+  *referenceStart = pos;
 
 #if DEBUGGING
   std::cout << "first reference pattern " << m_index << " started at " << pos << " " + input.substr(pos) << std::endl;
@@ -759,15 +766,24 @@ std::size_t ReferencePattern::find_first_of(std::size_t pos, const std::string& 
 
 std::size_t EndReferencePattern::find_first_of(std::size_t pos, const std::string& input)
 {
+  if (m_referencePattern.expired())
+    throw std::runtime_error("Attempted to access expired memory");
+
+  if (m_referenceStart.expired())
+    throw std::runtime_error("Attempted to access expired memory");
+
+  std::shared_ptr<std::size_t> referenceStart = m_referenceStart.lock();
+  std::shared_ptr<std::string> referencePattern = m_referencePattern.lock();
+
 #if DEBUGGING
-  std::cout << "first found reference that started at " << *m_referenceStart << " ended at " << pos << std::endl;
+  std::cout << "first found reference that started at " << *referenceStart << " ended at " << pos << std::endl;
 #endif
 
   // save the input that matched
-  *m_referencePattern = input.substr(*m_referenceStart, pos - *m_referenceStart);
+  *referencePattern = input.substr(*referenceStart, pos - *referenceStart);
 
 #if DEBUGGING
-  std::cout << "first found reference to check later: " + *m_referencePattern + " started at " << *m_referenceStart << " ended at " << pos << std::endl;
+  std::cout << "first found reference to check later: " + *referencePattern + " started at " << *referencePattern << " ended at " << pos << std::endl;
 #endif
 
   return pos;
@@ -775,15 +791,12 @@ std::size_t EndReferencePattern::find_first_of(std::size_t pos, const std::strin
 
 std::size_t BackreferencePattern::find_first_of(std::size_t pos, const std::string& input)
 {
+  if (m_referencedPattern.expired())
+    throw std::runtime_error("Attempted to access expired memory");
+
+  std::shared_ptr<std::string> referencedPattern = m_referencedPattern.lock();
+
   std::size_t newPos;
-
-  if (m_index >= m_referencedPatterns->size())
-    throw std::runtime_error("Attempted to create BackreferencePattern to an undeclared pattern");
-
-  std::shared_ptr<std::string> referencedPattern = m_referencedPatterns->at(m_index);
-
-  if (referencedPattern == nullptr)
-    throw std::runtime_error("Checking BackreferencePattern of undefined pattern index " + m_index);
 
 #if DEBUGGING
   std::cout << "first checking at pos " << pos  << " and beyond from " << input << " looking for " << *referencedPattern << " found at " << input.find_first_of(*referencedPattern, pos) << std::endl;
@@ -917,7 +930,12 @@ std::size_t AlternationPattern::starts_with(std::size_t pos, const std::string& 
 
 std::size_t ReferencePattern::starts_with(std::size_t pos, const std::string& input)
 {
-  *m_referenceStart = pos;
+  if (m_referenceStart.expired())
+    throw std::runtime_error("Attempted to access expired memory");
+
+  std::shared_ptr<std::size_t> referenceStart = m_referenceStart.lock();
+
+  *referenceStart = pos;
 
 #if DEBUGGING
   std::cout << "starts  reference pattern " << m_index << " started at " << pos << " " + input.substr(pos) << std::endl;
@@ -928,15 +946,24 @@ std::size_t ReferencePattern::starts_with(std::size_t pos, const std::string& in
 
 std::size_t EndReferencePattern::starts_with(std::size_t pos, const std::string& input)
 {
+  if (m_referencePattern.expired())
+    throw std::runtime_error("Attempted to access expired memory");
+
+  if (m_referenceStart.expired())
+    throw std::runtime_error("Attempted to access expired memory");
+
+  std::shared_ptr<std::size_t> referenceStart = m_referenceStart.lock();
+  std::shared_ptr<std::string> referencePattern = m_referencePattern.lock();
+
 #if DEBUGGING
-  std::cout << "starts  found reference that started at " << *m_referenceStart << " ended at " << pos << std::endl;
+  std::cout << "starts  found reference that started at " << *referenceStart << " ended at " << pos << std::endl;
 #endif
 
   // save the input that matched
-  *m_referencePattern = input.substr(*m_referenceStart, pos - *m_referenceStart);
+  *referencePattern = input.substr(*referenceStart, pos - *referenceStart);
 
 #if DEBUGGING
-  std::cout << "starts  found reference to check later: " + *m_referencePattern + " started at " << *m_referenceStart << " ended at " << pos << std::endl;
+  std::cout << "starts  found reference to check later: " + *referencePattern + " started at " << *referenceStart << " ended at " << pos << std::endl;
 #endif
 
   return pos;
@@ -944,13 +971,10 @@ std::size_t EndReferencePattern::starts_with(std::size_t pos, const std::string&
 
 std::size_t BackreferencePattern::starts_with(std::size_t pos, const std::string& input)
 {
-  if (m_index >= m_referencedPatterns->size())
-    throw std::runtime_error("Attempted to create BackreferencePattern to an undeclared pattern");
+  if (m_referencedPattern.expired())
+    throw std::runtime_error("Attempted to access expired memory");
 
-  std::shared_ptr<std::string> referencedPattern = m_referencedPatterns->at(m_index);
-
-  if (referencedPattern == nullptr)
-    throw std::runtime_error("Checking BackreferencePattern of undefined pattern index " + m_index);
+  std::shared_ptr<std::string> referencedPattern = m_referencedPattern.lock();
 
 #if DEBUGGING
   std::cout << "starts  comparing " << input.substr(pos, referencedPattern->size()) << " to " << *referencedPattern << std::endl;
